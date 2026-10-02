@@ -82,12 +82,3 @@ Ankara hourly temperature comes from Open-Meteo when the API answers. If it does
 
 `--max-k` bisects K between 0.5 and 2.0. If 0.5 is already too hot, or 2.0 is still gentle, it says that instead of pretending it found a root.
 
-## Layout
-
-```
-main.py          cli
-tests.py
-docs/            figures used in this readme
-data/            EPIAS csv
-hotspot/         params, heat, aging, profiles, sim, plots, live
-```
