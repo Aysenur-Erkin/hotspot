@@ -1,18 +1,10 @@
 # hotspot
 
-A small IEC 60076-7 tool for oil-filled transformers.
+IEC 60076-7 hot-spot hesabi. Bir gunluk yuk ve hava sicakligi alir, yag ve sargi sicakligini adimlar, o gunun kagida kac saat yaslandirdigini yazar.
 
-Paper around the windings dies with heat. The hottest point in the winding (the hot-spot) sets how fast that happens. This program takes a day of load and outdoor temperature, steps the IEC thermal model, and tells you how much life that day costs.
+Konut fiderinde yaz gunu, pik K ne kadar cikarsa kagit tasarimdan hizli yaslanir? `--max-k` bunu pik carpaninda ikiye bolerek arar.
 
-The question it is built for:
-
-> In summer, on a housing feeder, how high can the peak go before the paper ages faster than design?
-
-`--max-k` answers that with a binary search on peak load factor K.
-
-## What a run looks like
-
-Default command:
+## Ornek
 
 ```bash
 python main.py
@@ -22,7 +14,7 @@ python main.py
 transformer    : dist ONAN
 paper          : normal
 profile        : house, peak K = 1.00
-season         : summer (16…32 C)
+season         : summer (16-32 C)
 load src       : synthetic house
 amb src        : cosine summer
 max oil        :  73.9 C
@@ -32,17 +24,13 @@ eq aging       :   0.11 x
 life           : 179.1 yr   (ref ~20.5)
 ```
 
-Peak K = 1 means the day's highest load is rated load. On a house curve that peak is only a few evening hours, so most of the day the paper is cool. Equivalent aging 0.11x means that day costs about 11% of a design day. If every day looked like this, the 20.5-year reference scale would stretch a long way. That is expected — it is not a promise that the tank lasts 179 years.
+K = 1, gunun en yuksek yukunun anma yuk oldugu demek. Konut egrisinde bu pik birkac aksam saati. 0.11x, o gunun bir tasarim gununun yaklasik %11'i kadar yaslandirdigi demek. 179 yil, her gun bu sekilde gecerse referans olcegin ne kadar uzayacagi. Tankin 179 yil dayanacagi anlamina gelmez. Referans 180000 saat, yani yaklasik 20.5 yil (IEEE C57.91).
 
-Same day as a plot:
+![Gunluk yuk, sicaklik ve yaslanma](docs/day_house_summer.png)
 
-![Daily load, temperature and aging for a distribution ONAN transformer, housing profile, summer, K=1](docs/day_house_summer.png)
+Ust: yuk K ve dis sicaklik. Orta: hot-spot, ust yag, ortam, IEC cevrim sinirlari. Alt: bagil yaslanma V ve gun icinde tuketilen saat. Kaybin cogu aksam pikinde.
 
-Top: load K (blue) and outdoor temperature (green).
-Middle: hot-spot, top-oil, ambient, with the IEC cyclic limits.
-Bottom: relative aging V and the hours of life used up over the day. Almost all of the loss sits under the evening peak.
-
-## Commands
+## Komutlar
 
 ```bash
 python main.py --xfmr dist_onan --profile house --peak 1.3 --season summer
@@ -52,33 +40,29 @@ python main.py --paper upgraded --sweep
 python tests.py
 ```
 
-`numpy` and `matplotlib` are enough.
+numpy ve matplotlib yeter.
 
 | flag | |
 |---|---|
 | `--xfmr` | `dist_onan`, `pwr_onan`, `pwr_onaf` |
 | `--profile` | `house`, `factory`, `shop`, `flat`, `tr` |
-| `--peak` | peak load factor |
+| `--peak` | pik yuk carpani |
 | `--season` | `winter`, `spring`, `summer`, `fall` |
-| `--paper` | `normal` or `upgraded` |
-| `--max-k` | largest K with equivalent aging <= 1 |
-| `--sweep` | table of K from 0.6 to 1.5 |
-| `--real` | swap in Ankara weather |
-| `--profile tr` | use the EPIAS national load CSV |
-| `--out` | where plots go |
+| `--paper` | `normal` veya `upgraded` |
+| `--max-k` | esdeger yaslanma <= 1 olan en buyuk K |
+| `--sweep` | K = 0.6 ... 1.5 tablosu |
+| `--real` | Ankara havasi |
+| `--profile tr` | EPIAS ulusal tuketim CSV |
+| `--out` | grafik klasoru |
 
-## Data
+## Veri
 
-`data/epias_tuketim_2025-07-28.csv` is EPIAS real-time consumption for 28 Jul 2025. It is the **whole Turkish system**, not one street transformer. Night stays around 64% of the daily peak, so the machine never really rests. A housing feeder drops much lower at night. That is why `--real --profile tr --max-k` lands near K = 1, while `--real --max-k` (house shape + Ankara air) allows a bit more.
+`data/epias_tuketim_2025-07-28.csv` 28 Temmuz 2025 EPIAS gercek zamanli tuketim. Tum Turkiye sistemi, bir sokak trafosu degil. Gece, gunun pikinin yaklasik %64'unde kaliyor. Konut fideri geceleri daha cok duser. Bu yuzden `--real --profile tr --max-k` K = 1 civarina, `--real --max-k` (konut sekli + Ankara havasi) biraz daha yukariya cikar.
 
-Ankara hourly temperature comes from Open-Meteo when the API answers. If it does not, the code uses an approximate summer day and says so in the printout and on the figure title.
+Ankara saatlik sicaklik Open-Meteo cevap verirse oradan gelir. Gelmezse yaklasik yaz gunu kullanilir, cikti ve grafik basligi bunu yazar.
 
-## Model in short
+## Model
 
-- Top-oil and hot-spot: IEC 60076-7 difference equations (oil is slow, the winding is fast, hot-spot can overshoot).
-- Normal paper: aging doubles every 6 K, V = 1 at 98 C.
-- Upgraded paper: Arrhenius form, V = 1 at 110 C.
-- 180000 h (~20.5 years) is the IEEE C57.91 reference scale, not a nameplate life.
+Ust yag ve hot-spot IEC 60076-7 fark denklemleri. Yag yavas, sargi hizli, hot-spot asma yapabilir. Normal kagit 6 K'de bir ikiye katlanir, V = 1 noktasi 98 C. Yukseltilmis kagit Arrhenius, V = 1 noktasi 110 C.
 
-`--max-k` bisects K between 0.5 and 2.0. If 0.5 is already too hot, or 2.0 is still gentle, it says that instead of pretending it found a root.
-
+`--max-k` K'yi 0.5 ile 2.0 arasinda boler. 0.5 zaten sicaksa veya 2.0 hâlâ sakinse kok buldum demez, uyari basar.
