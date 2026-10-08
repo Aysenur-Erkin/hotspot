@@ -22,8 +22,8 @@ def t3():
 
 def t4():
     p = READY["dist_onan"]
-    s1 = sim.go(p, "house", 1, "summer")
-    s2 = sim.go(p, "house", 1.3, "summer")
+    s1 = sim.run(p, "house", 1, "summer")
+    s2 = sim.run(p, "house", 1.3, "summer")
     assert s2.eqAge > s1.eqAge
     assert s2.maxHot > s1.maxHot
 
